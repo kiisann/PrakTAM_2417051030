@@ -3,7 +3,6 @@ package com.example.praktam_2417051030
 import Model.Todolist
 import Model.TodolistSource
 import android.os.Bundle
-import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,12 +18,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -47,7 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(modifier: Modifier = Modifier) {
+fun Greeting() {
     Column(modifier = Modifier.fillMaxSize(). padding(24.dp)) {
 
         TodolistSource.dummyTodolist.forEach { todo ->
@@ -68,7 +76,7 @@ fun Greeting(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun TodoScreen(modifier: Modifier = Modifier) {
+fun TodoScreen() {
     Column(modifier = Modifier
         .fillMaxSize()
         .verticalScroll(rememberScrollState())
@@ -82,19 +90,34 @@ fun TodoScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun TodoDetailScreen(modifier: Modifier = Modifier, todo: Todolist) {
+fun TodoDetailScreen(todo: Todolist) {
+    var isFavorite by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxSize()) {
         Card(modifier = Modifier) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Image(
-                    painter = painterResource(id = todo.imageRes),
-                    contentDescription = todo.kegiatan,
-                    modifier = Modifier.fillMaxWidth().height(200.dp)
-                        .padding(16.dp, 16.dp,16.dp,0.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier) {
+                    Image(
+                        painter = painterResource(id = todo.imageRes),
+                        contentDescription = todo.kegiatan,
+                        modifier = Modifier.fillMaxWidth().height(200.dp)
+                            .padding(16.dp, 16.dp, 16.dp, 16.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    IconButton(
+                        onClick = { isFavorite = !isFavorite },
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) Color.Red else Color.White
+                        )
+                    }
+                }
 
                 Text(text = todo.kegiatan,
                     style = MaterialTheme.typography.headlineMedium,
@@ -127,11 +150,11 @@ fun TodoDetailScreen(modifier: Modifier = Modifier, todo: Todolist) {
                 Text(text = "Status: ${todo.status}",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.Black,
-                    modifier = Modifier.padding(16.dp, 0.dp, 0.dp, 16.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
                 Button(onClick = { },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp, 16.dp, 16.dp)
                 ) { Text(text = "Selesai") }
             }
         }
