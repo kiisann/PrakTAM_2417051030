@@ -154,7 +154,7 @@ fun TodoDetailScreen(todo: Todolist) {
                 )
 
                 Button(onClick = { },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp, 16.dp, 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
                 ) { Text(text = "Selesai") }
             }
         }
