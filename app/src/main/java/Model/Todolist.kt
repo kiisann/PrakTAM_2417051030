@@ -1,7 +1,8 @@
 package Model
 import androidx.annotation.DrawableRes
 
-data class Todolist(
+data class
+Todolist(
     val kegiatan: String,
     val deadline: String,
     val prioritas: String,

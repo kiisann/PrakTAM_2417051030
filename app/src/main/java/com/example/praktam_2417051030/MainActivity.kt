@@ -145,7 +145,7 @@ fun TodoRowItem(todo: Todolist) {
         modifier = Modifier.width(160.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
     ) {
         Column {
             Image(
@@ -209,35 +209,35 @@ fun TodoDetailScreen(todo: Todolist) {
 
                 Text(text = todo.kegiatan,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(text = "Deadline: ${todo.deadline}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(text = "Prioritas: ${todo.prioritas}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(text = "Catatan: ${todo.catatan}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(text = "Status: ${todo.status}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
