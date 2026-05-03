@@ -1,29 +1,14 @@
 package com.example.praktam_2417051030
 
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavController
 import Model.Todolist
 import Model.TodolistSource
+import Network.RetrofitClient
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,18 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,14 +29,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.praktam_2417051030.ui.theme.PrakTAM_2417051030Theme
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,8 +45,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PrakTAM_2417051030Theme {
-                    val navController = rememberNavController()
-                    AppNavigation(navController)
+                val navController = rememberNavController()
+                AppNavigation(navController)
             }
         }
     }
@@ -78,17 +54,28 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
+    var todolist by remember { mutableStateOf(TodolistSource.dummyTodolist) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val fetchedData = RetrofitClient.instance.getTodos()
+            if (fetchedData.isNotEmpty()) {
+                todolist = fetchedData
+            }
+        } catch (e: Exception) {
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
         composable("home") {
-            TodoScreen(navController)
+            TodoScreen(navController, todolist)
         }
-
         composable("detail/{todoId}") { backStackEntry ->
             val todoId = backStackEntry.arguments?.getString("todoId")
-            val todo = TodolistSource.dummyTodolist.find { it.kegiatan == todoId }
+            val todo = todolist.find { it.kegiatan == todoId }
             if (todo != null) {
                 TodoDetailScreen(todo = todo, navController = navController, isFullScreen = true)
             }
@@ -97,30 +84,7 @@ fun AppNavigation(navController: NavHostController) {
 }
 
 @Composable
-fun Greeting() {
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(24.dp)) {
-
-        TodolistSource.dummyTodolist.forEach { todo ->
-            Image(
-                painter = painterResource(id = todo.imageRes),
-                contentDescription = todo.kegiatan,
-                modifier = Modifier.size(100.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            Text(text = "Kegiatan: ${todo.kegiatan}")
-            Text(text = "Deadline: ${todo.deadline}")
-            Text(text = "Prioritas: ${todo.prioritas}")
-            Text(text = "Catatan: ${todo.catatan}")
-            Text(text = "Status: ${todo.status}\n")
-        }
-    }
-}
-
-@Composable
-fun TodoScreen(navController: NavController) {
+fun TodoScreen(navController: NavController, todolist: List<Todolist>) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -136,10 +100,8 @@ fun TodoScreen(navController: NavController) {
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(TodolistSource.dummyTodolist) { todo ->
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(todolist) { todo ->
                     TodoRowItem(todo = todo, navController = navController)
                 }
             }
@@ -153,8 +115,8 @@ fun TodoScreen(navController: NavController) {
             )
         }
 
-        items(TodolistSource.dummyTodolist) { todo ->
-            TodoDetailScreen(todo = todo, navController = navController)
+        items(todolist) { todo ->
+            TodoDetailScreen(todo = todo, navController = navController, isFullScreen = false)
         }
     }
 }
@@ -170,174 +132,196 @@ fun TodoRowItem(todo: Todolist, navController: NavController) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
     ) {
         Column {
-            Image(
-                painter = painterResource(id = todo.imageRes),
+            AsyncImage(
+                model = todo.imageUrl,
                 contentDescription = todo.kegiatan,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
-                contentScale = ContentScale.Crop
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.rapat),
+                error = painterResource(id = R.drawable.belajar)
             )
             Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = todo.kegiatan,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = todo.deadline,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Text(text = todo.kegiatan, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(text = todo.deadline, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
 }
 
 @Composable
-fun TodoDetailScreen(todo: Todolist, navController: NavController, isFullScreen: Boolean = false) {
+fun TodoDetailScreen(todo: Todolist, navController: NavController, isFullScreen: Boolean = false, onTodoLoaded: (List<Todolist>) -> Unit = {}) {
     var isFavorite by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var isError by remember { mutableStateOf(false) }
+    var todos by remember { mutableStateOf<List<Todolist>>(emptyList()) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    LaunchedEffect(Unit) {
+        try {
+            todos = RetrofitClient.instance.getTodos()
+            onTodoLoaded(todos)
+            isLoading = false
+            isError = false
+        } catch (e: Exception) {
+            isLoading = false
+            isError = true
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator() }
+    } else if (isError || todos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier) {
-                        Image(
-                            painter = painterResource(id = todo.imageRes),
-                            contentDescription = todo.kegiatan,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(16.dp, 16.dp, 16.dp, 16.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        IconButton(
-                            onClick = { isFavorite = !isFavorite },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.TopEnd)
-                        ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (isFavorite) Color.Red else Color.White
-                            )
-                        }
-                    }
-
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = todo.kegiatan,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        text = "Gagal Memuat Data",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Text(
-                        text = "Deadline: ${todo.deadline}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        text = "Pastikan koneksi internet Anda menyala",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        textAlign =
+
+                            androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Prioritas: ${todo.prioritas}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Catatan: ${todo.catatan}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Status: ${todo.status}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-
-                    if (isFullScreen) {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    isLoading = true
-                                    delay(2000)
-                                    snackbarHostState.showSnackbar("Kegiatan ${todo.kegiatan} selesai!")
-                                    isLoading = false
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp, 16.dp, 16.dp, 0.dp),
-                            enabled = !isLoading
-                        ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Menunggu")
-                            } else {
-                                Text("Selesai")
-                            }
-                        }
-                    }
-
-                    Button(
-                        onClick = {
-                            if (isFullScreen) {
-                                navController.popBackStack()
-                            } else {
-                                navController.navigate("detail/${todo.kegiatan}")
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) { Text(if (isFullScreen) "Kembali" else "Detail") }
                 }
             }
-            if (isFullScreen) {
-                Spacer(modifier = Modifier.height(100.dp))
+        } else {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isFullScreen) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(if (isFullScreen) 0.dp else 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier) {
+                                AsyncImage(
+                                    model = todo.imageUrl,
+                                    contentDescription = todo.kegiatan,
+                                    placeholder = painterResource(R.drawable.rapat),
+                                    error = painterResource(R.drawable.belajar),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .padding(16.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+
+                                IconButton(
+                                    onClick = { isFavorite = !isFavorite },
+                                    modifier = Modifier.padding(16.dp).align(Alignment.TopEnd)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                        contentDescription = "Favorite",
+                                        tint = if (isFavorite) Color.Red else Color.White
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = todo.kegiatan,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.Black,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Text(
+                                text = "Deadline: ${todo.deadline}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Text(
+                                text = "Prioritas: ${todo.prioritas}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Text(
+                                text = "Catatan: ${todo.catatan}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Text(
+                                text = "Status: ${todo.status}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            if (isFullScreen) {
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            isLoading = true
+                                            delay(2000)
+                                            snackbarHostState.showSnackbar("Kegiatan ${todo.kegiatan} selesai!")
+                                            isLoading = false
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    enabled = !isLoading
+                                ) {
+                                    if (isLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("Selesai")
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { navController.popBackStack() },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                ) {
+                                    Text("Kembali")
+                                }
+                            }
+                        }
+                    }
+                }
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
+    }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
-        )
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun TodoScreenPreview() {
+    PrakTAM_2417051030Theme {
+        val navController = rememberNavController()
+        TodoScreen(navController = navController, todolist = TodolistSource.dummyTodolist)
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun GreetingPreview() {
+fun TodoDetailPreview() {
     PrakTAM_2417051030Theme {
-        Greeting()
+        val navController = rememberNavController()
+        TodoDetailScreen(
+            todo = TodolistSource.dummyTodolist[0],
+            navController = navController,
+            isFullScreen = true
+        )
     }
 }

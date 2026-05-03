@@ -1,12 +1,18 @@
 package Model
-import androidx.annotation.DrawableRes
 
-data class
-Todolist(
+import com.google.gson.annotations.SerializedName
+
+data class Todolist(
+    @SerializedName("kegiatan")
     val kegiatan: String,
+    @SerializedName("deadline")
     val deadline: String,
+    @SerializedName("prioritas")
     val prioritas: String,
+    @SerializedName("catatan")
     val catatan: String,
+    @SerializedName("status")
     val status: String,
-    @DrawableRes val imageRes: Int
+    @SerializedName("image_url")
+    val imageUrl: Any
 )
