@@ -1,6 +1,6 @@
-package Network
+package Data.Api
 
-import Model.Todolist
+import Data.Model.Todolist
 import retrofit2.http.GET
 
 interface ApiService {

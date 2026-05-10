@@ -1,8 +1,9 @@
 package com.example.praktam_2417051030
 
-import Model.Todolist
-import Model.TodolistSource
-import Network.RetrofitClient
+import Data.Api.RetrofitClient
+import Data.Model.Todolist
+import Data.Model.TodolistSource
+import Data.Repository.TodoRepository
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,7 @@ import com.example.praktam_2417051030.ui.theme.PrakTAM_2417051030Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
+import com.example.praktam_2417051030.R
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,18 +153,20 @@ fun TodoRowItem(todo: Todolist, navController: NavController) {
 @Composable
 fun TodoDetailScreen(todo: Todolist, navController: NavController, isFullScreen: Boolean = false, onTodoLoaded: (List<Todolist>) -> Unit = {}) {
     var isFavorite by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
+    var isActionLoading by remember { mutableStateOf(false) } // State baru khusus tombol
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var isError by remember { mutableStateOf(false) }
     var todos by remember { mutableStateOf<List<Todolist>>(emptyList()) }
+    val Repository = remember { TodoRepository() }
 
     LaunchedEffect(Unit) {
         try {
-            todos = RetrofitClient.instance.getTodos()
+            todos = Repository.getTodos()
             onTodoLoaded(todos)
             isLoading = false
-            isError = false
+            isError = todos.isEmpty()
         } catch (e: Exception) {
             isLoading = false
             isError = true
@@ -171,138 +175,137 @@ fun TodoDetailScreen(todo: Todolist, navController: NavController, isFullScreen:
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator() }
-    } else if (isError || todos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
+            CircularProgressIndicator()
+        }
+    } else if (isError || (isFullScreen && todos.isEmpty())) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Gagal Memuat Data",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Red
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Pastikan koneksi internet Anda menyala",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        textAlign =
-
-                            androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Text(
+                    text = "Gagal Memuat Data",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Pastikan koneksi internet Anda menyala",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-        } else {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (isFullScreen) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+        }
+    } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (isFullScreen) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(if (isFullScreen) 0.dp else 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(if (isFullScreen) 0.dp else 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier) {
-                                AsyncImage(
-                                    model = todo.imageUrl,
-                                    contentDescription = todo.kegiatan,
-                                    placeholder = painterResource(R.drawable.rapat),
-                                    error = painterResource(R.drawable.belajar),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(200.dp)
-                                        .padding(16.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Box(modifier = Modifier) {
+                            AsyncImage(
+                                model = todo.imageUrl,
+                                contentDescription = todo.kegiatan,
+                                placeholder = painterResource(R.drawable.rapat),
+                                error = painterResource(R.drawable.belajar),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .padding(16.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
 
-                                IconButton(
-                                    onClick = { isFavorite = !isFavorite },
-                                    modifier = Modifier.padding(16.dp).align(Alignment.TopEnd)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                        contentDescription = "Favorite",
-                                        tint = if (isFavorite) Color.Red else Color.White
+                            IconButton(
+                                onClick = { isFavorite = !isFavorite },
+                                modifier = Modifier.padding(16.dp).align(Alignment.TopEnd)
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                    contentDescription = "Favorite",
+                                    tint = if (isFavorite) Color.Red else Color.White
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = todo.kegiatan,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.Black,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Text(
+                            text = "Deadline: ${todo.deadline}",
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Text(
+                            text = "Prioritas: ${todo.prioritas}",
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Text(
+                            text = "Catatan: ${todo.catatan}",
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Text(
+                            text = "Status: ${todo.status}",
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+
+                        if (isFullScreen) {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        isActionLoading = true
+                                        delay(2000)
+                                        isActionLoading = false
+                                        snackbarHostState.showSnackbar("Kegiatan ${todo.kegiatan} selesai!")
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                enabled = !isActionLoading
+                            ) {
+                                if (isActionLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
                                     )
+                                } else {
+                                    Text("Selesai")
                                 }
                             }
 
-                            Text(
-                                text = todo.kegiatan,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = Color.Black,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Text(
-                                text = "Deadline: ${todo.deadline}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Text(
-                                text = "Prioritas: ${todo.prioritas}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Text(
-                                text = "Catatan: ${todo.catatan}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Text(
-                                text = "Status: ${todo.status}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-
-                            if (isFullScreen) {
-                                Button(
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            isLoading = true
-                                            delay(2000)
-                                            snackbarHostState.showSnackbar("Kegiatan ${todo.kegiatan} selesai!")
-                                            isLoading = false
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                    enabled = !isLoading
-                                ) {
-                                    if (isLoading) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text("Selesai")
-                                    }
-                                }
-
-                                Button(
-                                    onClick = { navController.popBackStack() },
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                                ) {
-                                    Text("Kembali")
-                                }
+                            Button(
+                                onClick = { navController.popBackStack() },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                            ) {
+                                Text("Kembali")
                             }
                         }
                     }
                 }
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
             }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
+}
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
